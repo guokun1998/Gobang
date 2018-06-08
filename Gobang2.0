@@ -1,0 +1,197 @@
+import java.awt.Graphics;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+/*
+    图片介绍：board 棋盘  左右22像素 1像素线 格子大小 34 * 34  上边23 下边 22
+                         左右: 22*2 + 15*1 + 14*34 = 535
+                         上下：23 + 22 + 15*1 + 14*34 = 536
+             黑白棋子 33*33
+             选择框 36*36，用来框定可以下棋的位置
+ */
+public class Gobang {
+    BufferedImage table;
+    BufferedImage black;
+    BufferedImage white;
+    BufferedImage selected;
+    private static int BOARD_SIZE = 15;//棋盘一个方向点的多少
+    private final int TABLE_WIDTH = 535;//桌子的像素
+    private final int TABLE_HEIGHT = 536;
+    private final int RATE = TABLE_WIDTH / BOARD_SIZE;//比例  35   一个棋子可以占的最大位置 去不去掉X_OFFSET无影响（int）
+    private final int X_OFFSET = 5;//22 - 34*0.5 = 5，以点为中心向左应该辐射34*0.5，剩下的为左边框
+    private final int Y_OFFSET = 6;//23 - 34*0.5 = 6
+
+    private String[][] board = new String[BOARD_SIZE][BOARD_SIZE];//黑0白1无-1
+    JFrame f = new JFrame("五子棋游戏");
+    ChessBoard chessBoard= new ChessBoard();
+    private int selectedX = -1;
+    private int selectedY = -1;
+    private String result = "nobody";//代表结果 nobody ， BlackSide , WhiteSide
+    private boolean FirstNextValue = true;//代表先后，true是黑，false是白
+    public void init() throws IOException {
+        table = ImageIO.read(new File("C:/Users/hasee/Desktop/source/Gobang/image/board.jpg"));
+        black = ImageIO.read(new File("C:/Users/hasee/Desktop/source/Gobang/image/black.gif"));
+        white = ImageIO.read(new File("C:/Users/hasee/Desktop/source/Gobang/image/white.gif"));
+        selected = ImageIO.read(new File("C:/Users/hasee/Desktop/source/Gobang/image/selected.gif"));
+        //初始化
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                board[i][j] = "-1";
+            }
+        }
+        chessBoard.setPreferredSize(new Dimension(TABLE_WIDTH,TABLE_HEIGHT));
+        chessBoard.addMouseListener(new MouseAdapter() {
+            @Override
+            //接受到敲击事件后，将数组填写并repaint
+            public void mouseClicked(MouseEvent e) {
+                int xPos = (int)((e.getX() - X_OFFSET) / RATE);
+                int yPos = (int)((e.getY() - Y_OFFSET) / RATE);
+                if (board[xPos][yPos] == "-1")
+                {
+                    if (FirstNextValue) {
+                        board[xPos][yPos] = "0";
+                        FirstNextValue = false;
+                    }
+                    else{
+                        board[xPos][yPos] = "1";
+                        FirstNextValue = true;
+                    }
+                }
+                chessBoard.repaint();
+
+                //判断胜利,将结果写入result有一方胜利就repaint
+                result = winnerOfGoBang(board,"0","1");
+                if (result.equals("nobody")){}
+                else{
+                    chessBoard.repaint();
+
+                }
+            }
+            //当鼠标移出窗口后，选择框消失，不影响大体，可以省略
+            public void mouseExited(MouseEvent e){
+                selectedX = -1;
+                selectedY = -1;
+                chessBoard.repaint();
+                //System.exit(0);
+            }
+        });
+        //移动监听者，鼠标移动后给出可以下棋的区域的选择框
+        chessBoard.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                selectedX = (e.getX() - X_OFFSET) / RATE;
+                selectedY = (e.getY() - Y_OFFSET) / RATE;
+                chessBoard.repaint();
+            }
+        });
+        f.add(chessBoard);
+        f.pack();
+        f.setVisible(true);
+    }
+
+    /**
+     * @discription 判断String数组中是否有胜利的一方，算法：对二维数组中1<i<length-2的数进行四种情况的判定
+     * @param String[][],First,Second
+     * @return String
+     *
+     */
+    public String winnerOfGoBang(String[][] s,String BlackSide,String WhiteSide){
+        String winner = "nobody";
+        for (int i = 2; i < s.length - 2; i++) {
+            for (int j = 2; j < s.length - 2; j++) {
+
+                if (s[i][j].equals(BlackSide) && s[i-2][j].equals(BlackSide) && s[i-1][j].equals(BlackSide)
+                        && s[i+1][j].equals(BlackSide) &&s[i+2][j].equals(BlackSide)){
+                    winner = "BlackSide";
+                    return winner;
+                }
+                if (s[i][j].equals(BlackSide) && s[i][j-2].equals(BlackSide) && s[i][j-1].equals(BlackSide)
+                        && s[i][j+2].equals(BlackSide) &&s[i][j+2].equals(BlackSide)){
+                    winner = "BlackSide";
+                    return winner;
+                }
+                if (s[i][j].equals(BlackSide) && s[i-2][j-2].equals(BlackSide) && s[i-1][j-1].equals(BlackSide)
+                        && s[i+1][j+1].equals(BlackSide) &&s[i+2][j+2].equals(BlackSide)){
+                    winner = "BlackSide";
+                    return winner;
+                }
+                if (s[i][j].equals(BlackSide) && s[i-2][j+2].equals(BlackSide) && s[i-1][j+1].equals(BlackSide)
+                        && s[i+1][j-1].equals(BlackSide) &&s[i+2][j-2].equals(BlackSide)){
+                    winner = "BlackSide";
+                    return winner;
+                }
+                if (s[i][j].equals(WhiteSide) && s[i-2][j].equals(WhiteSide) && s[i-1][j].equals(WhiteSide)
+                        && s[i+1][j].equals(WhiteSide) &&s[i+2][j].equals(WhiteSide)){
+                    winner = "WhiteSide";
+                    return winner;
+                }
+                if (s[i][j].equals(WhiteSide) && s[i][j-2].equals(WhiteSide) && s[i][j-1].equals(WhiteSide)
+                        && s[i][j+2].equals(WhiteSide) &&s[i][j+2].equals(WhiteSide)){
+                    winner = "WhiteSide";
+                    return winner;
+                }
+                if (s[i][j].equals(WhiteSide) && s[i-2][j-2].equals(WhiteSide) && s[i-1][j-1].equals(WhiteSide)
+                        && s[i+1][j+1].equals(WhiteSide) &&s[i+2][j+2].equals(WhiteSide)){
+                    winner = "WhiteSide";
+                    return winner;
+                }
+                if (s[i][j].equals(WhiteSide) && s[i-2][j+2].equals(WhiteSide) && s[i-1][j+1].equals(WhiteSide)
+                        && s[i+1][j-1].equals(WhiteSide) &&s[i+2][j-2].equals(WhiteSide)){
+                    winner = "WhiteSide";
+                    return winner;
+                }
+
+            }
+        }
+        return winner;
+    }
+    //判断是否有获胜者，实际中并未使用
+    public boolean hasWinner(String[][] s,String BlackSide,String WhiteSide){
+        String result1 = winnerOfGoBang(s,BlackSide,WhiteSide);
+        if (result1.equals("nobody")){
+            return false;
+        }
+        return true;
+    }
+    public static void main(String[] args) throws IOException {
+        Gobang gb = new Gobang();
+        gb.init();
+    }
+    //绘画 若无人获胜就将数组中的信息转化为图片添加，有人获胜输出结束信息
+    class ChessBoard extends JPanel{
+        public void paint(Graphics g){
+            if(result.equals("BlackSide")){
+                g.setColor(new Color(255,0,0));
+                g.setFont(new Font("Times",Font.BOLD,30));
+                g.drawString("游戏已结束！"+'\n'+"胜利者是：黑方", 50, 200);
+            }
+            else if(result.equals("WhiteSide")){
+                g.setColor(new Color(255,0,0));
+                g.setFont(new Font("Times",Font.BOLD,30));
+                g.drawString("游戏已结束！"+'\n'+"胜利者是：白方", 50, 200);
+            }
+            else{
+                g.drawImage(table,0,0,null);
+                if(selectedX >= 0 && selectedY >=0)
+                    g.drawImage(selected,selectedX * RATE + X_OFFSET,selectedY * RATE + Y_OFFSET,null);
+                for (int i = 0; i < BOARD_SIZE; i++) {
+                    for (int j = 0; j < BOARD_SIZE; j++) {
+                        if(board[i][j].equals("0")){
+                            g.drawImage(black,i * RATE + X_OFFSET,j * RATE + Y_OFFSET,null);
+                        }
+                        if(board[i][j].equals("1")){
+                            g.drawImage(white,i * RATE + X_OFFSET,j * RATE + Y_OFFSET,null);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
